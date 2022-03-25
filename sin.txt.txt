@@ -1,0 +1,7 @@
+SHIFT+A 4 4db cube elhelyezese
+SCALE - S 
+TAB - EDIT mode
+4 csucs kijelol -> E: hosszzabbitas
+G + (X/Y/Z) - tengely menten elhelyezes
+1 elem elkeszult, elemet bemasoltam parszor
+majd G + X tengely menten sorba helyeztem oket

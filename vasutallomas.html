@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset=utf-8>
+    <title>Vasutallomas</title>
+    <style>
+       
+        canvas { width: 100%; height: 100% }
+
+
+    </style>
+</head>
+<body>
+
+</body>
+
+
+
+
+
+
+<script type="module">
+    import * as THREE from './js-r132/build/three.module.js';
+    import { OBJLoader } from './js-r132/examples/jsm/loaders/OBJLoader.js';
+    import { MTLLoader } from './js-r132/examples/jsm/loaders/MTLLoader.js';
+    import { TrackballControls } from './js-r132/examples/jsm/controls/TrackballControls.js';
+    import { GUI } from './js-r132/examples/jsm/libs/dat.gui.module.js';
+    import Stats from './js-r132/examples/jsm/libs/stats.module.js';
+
+
+
+    document.addEventListener("keyup", function(event) {
+        let x = document.getElementById("main");
+        if (event.keyCode === 73) {
+            if(x.style.display === "none"){
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+
+        }
+    });
+
+
+    // Globális változók
+    var WIDTH, HEIGHT, aspectRatio;
+    var scene, camera;
+    var meshLoaded,sin;
+    var ctrl,stats;
+    var renderer;
+    var light1;
+    var controls;
+    var clock;
+    var ambientLight;
+    var sLight;
+    var sLight2;
+    var sin;
+    var lampa_izzo;
+    var zold = new THREE.Color(0x13fc03);
+    var piros = new THREE.Color(0xfc0303);
+
+    var guiParams ={
+        switch:true
+    }
+
+
+
+    var meshController = function () {
+        this.positionVonat = 0.0;
+    };
+
+    function addStatsObject() {
+        stats = new Stats();
+        stats.setMode(0);
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.left = '0px';
+        stats.domElement.style.top = '0px';
+        document.body.appendChild( stats.domElement );
+    }
+
+    function addControlGui(controlObject){
+        var gui = new GUI({autoPlace:false})
+        gui.add( controlObject, 'positionVonat', -10.0, 20.0).name( 'Vonat pozíció' );
+        gui.add(guiParams,'switch').name('Ejszaka / Nappal').onFinishChange(val => {
+            if(ambientLight.visible){
+                ambientLight.visible = false;
+            }else {
+                ambientLight.visible = true;
+            }
+        });
+        gui.add(guiParams,'switch').name('Reflektor Toggle').onFinishChange(val => {
+            if(sLight.visible){
+                sLight.visible = false;
+            }else {
+                sLight.visible = true;
+            }
+        });
+        gui.add(guiParams,'switch').name('Reflektor2 Toggle').onFinishChange(val => {
+            if(sLight2.visible){
+                sLight2.visible = false;
+            }else {
+                sLight2.visible = true;
+            }
+        });
+
+
+        gui.domElement.style.position = 'absolute';
+        gui.domElement.style.top = '0px';
+        gui.domElement.style.right = '0px';
+        document.body.appendChild( gui.domElement );
+    }
+
+
+    loader_obj_mtl();
+
+
+
+
+   function loader_obj_mtl() {
+        var OBJFile = 'assets/models/vonat.obj';
+        var MTLFile = 'assets/models/vonat.mtl';
+
+        new MTLLoader()
+            .load(MTLFile, function (materials) {
+                materials.preload();
+                new OBJLoader()
+                    .setMaterials(materials)
+                    .load(OBJFile, function (object) {
+                        meshLoaded = object;
+                        meshLoaded.scale.set(1,1,1);
+                        console.log(object);
+
+
+                        object.traverse(function (child) {
+                            if (child instanceof THREE.Mesh) {
+                                child.scale.set(4, 4, 4);
+                                //child.material.side = THREE.DoubleSide;
+
+                                console.log(child.material);
+                            }
+                        });
+
+                        init();
+                    });
+            });
+    }
+
+
+
+
+
+
+
+    function init() {
+        // Böngésző ablakméret lekérése és méretarány számítása
+        HEIGHT = window.innerHeight;
+        WIDTH = window.innerWidth;
+        aspectRatio = WIDTH / HEIGHT;
+
+
+
+        // Színtér létrehozása
+        scene = new THREE.Scene();
+
+        // Renderer létrehozása és DOM-hoz adása
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setSize( WIDTH, HEIGHT );
+        renderer.setClearColor( 0x202020 );
+        document.body.appendChild( renderer.domElement );
+
+
+        // Kamera létrehozása és vetítési paramétereinek beállítása
+        camera = new THREE.PerspectiveCamera( 75, aspectRatio, 0.1, 1000 );
+        camera.position.set( 20, 20, 50 );
+
+        //VONAT BETOLTESE
+        scene.add( meshLoaded );
+
+        meshLoaded.scale.set(0.2,0.2,0.2)
+        meshLoaded.position.set(30,2.5,-10)
+        meshLoaded.rotateY(Math.PI*1.5)
+
+        // SIN BETOLTESE
+        const loader = new OBJLoader();
+        loader.load(
+            'assets/models/sin.obj',
+            function (object){
+                scene.add(object);
+                object.position.set(27.5,2,20)
+                object.rotateY(Math.PI*1.5);
+            }
+        )
+
+
+
+        var planeGeometry = new THREE.PlaneGeometry( 30, 30, 5, 2 );
+        var planeMaterial = new THREE.MeshPhongMaterial({wireframe:false, side: THREE.DoubleSide}); //color: 0x696969, wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/tile.jpg');
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(15,15);
+        planeMaterial.map = texture;
+        var planeMesh = new THREE.Mesh( planeGeometry, planeMaterial );
+        planeMesh.position.set(10,2,5);
+        planeMesh.rotation.x=Math.PI/2;
+        planeMesh.rotation.y=Math.PI;
+        planeMesh.receiveShadow = true;
+        scene.add( planeMesh );
+
+        var planeGeometry = new THREE.PlaneGeometry( 10, 50, 5, 2 );
+        var planeMaterial = new THREE.MeshPhongMaterial({wireframe:false, side: THREE.DoubleSide}); //color: 0x696969, wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/grass.jpg');
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(15,15);
+        planeMaterial.map = texture;
+        var fu = new THREE.Mesh( planeGeometry, planeMaterial );
+        fu.position.set(30,2,5);
+        fu.rotation.x=Math.PI/2;
+        fu.rotation.y=Math.PI;
+        fu.receiveShadow = true;
+        scene.add( fu);
+
+
+
+
+        //kozepso elol vizszintes resz
+        var boxGeometry = new THREE.BoxGeometry( 10, 2, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var kozepso_elol_vizszint = new THREE.Mesh( boxGeometry, boxMaterial );
+        kozepso_elol_vizszint.position.set(12,9,15);
+        kozepso_elol_vizszint.receiveShadow = true;
+        kozepso_elol_vizszint.castShadow = true;
+        kozepso_elol_vizszint.rotateY(Math.PI);
+        //scene.add( boxMesh );
+
+
+
+        //kozepso hatso vizszintes resz
+        var boxGeometry = new THREE.BoxGeometry( 10, 2, 4);
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var kozepso_hatso_vizszint = new THREE.Mesh( boxGeometry, boxMaterial );
+        kozepso_hatso_vizszint.position.set(12,9,-6);
+        kozepso_hatso_vizszint.receiveShadow = true;
+        kozepso_hatso_vizszint.castShadow = true;
+        kozepso_hatso_vizszint.rotateY(Math.PI);
+        //scene.add( boxMesh );
+
+
+        //bal elso vertikalis
+        var boxGeometry = new THREE.BoxGeometry( 4, 8, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( { wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var bal_elso_vertikalis = new THREE.Mesh( boxGeometry, boxMaterial );
+        bal_elso_vertikalis.position.set(5,6,15);
+        bal_elso_vertikalis.receiveShadow = true;
+        bal_elso_vertikalis.castShadow = true;
+        //scene.add( boxMesh );
+
+
+
+        //bal hatso vertikalis
+        var boxGeometry = new THREE.BoxGeometry( 4, 8, 4);
+        var boxMaterial = new THREE.MeshPhongMaterial( { wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var bal_hatso_vertikalis = new THREE.Mesh( boxGeometry, boxMaterial );
+        bal_hatso_vertikalis.position.set(5,6,-6);
+        bal_hatso_vertikalis.receiveShadow = true;
+        bal_hatso_vertikalis.castShadow = true;
+        //scene.add( boxMesh );
+
+        //jobb elso vertikalis
+        var boxGeometry = new THREE.BoxGeometry( 4, 8, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var jobb_elso_vertikalis = new THREE.Mesh( boxGeometry, boxMaterial );
+        jobb_elso_vertikalis.position.set(19,6,15);
+        jobb_elso_vertikalis.receiveShadow = true;
+        jobb_elso_vertikalis.castShadow = true;
+        //scene.add( boxMesh );
+
+        //jobb hatso vertikalis
+        var boxGeometry = new THREE.BoxGeometry( 4, 8, 4);
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var jobb_hatso_vertikalis = new THREE.Mesh( boxGeometry, boxMaterial );
+        jobb_hatso_vertikalis.position.set(19,6,-6);
+        jobb_hatso_vertikalis.receiveShadow = true;
+        jobb_hatso_vertikalis.castShadow = true;
+        //scene.add( boxMesh );
+
+        //bal elso kupola
+        var coneGeometry = new THREE.ConeGeometry( 3, 5, 4 );
+        var coneMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/roof.jpg');
+        coneMaterial.map = texture;
+        var bal_elso_kupola = new THREE.Mesh( coneGeometry, coneMaterial );
+        bal_elso_kupola.position.set(5,12.5,15);
+        bal_elso_kupola.position.set(5,12.5,15);
+        bal_elso_kupola.rotateY(Math.PI/4);
+        bal_elso_kupola.receiveShadow = true;
+        bal_elso_kupola.castShadow = true;
+        //scene.add( coneMesh );
+
+        //jobb elso kupola
+        var coneGeometry = new THREE.ConeGeometry( 3, 5, 4 );
+        var coneMaterial = new THREE.MeshPhongMaterial( { wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/roof.jpg');
+        coneMaterial.map = texture;
+        var jobb_elso_kupola= new THREE.Mesh( coneGeometry, coneMaterial );
+        jobb_elso_kupola.position.set(19,12.5,15);
+        jobb_elso_kupola.rotateY(Math.PI/4);
+        jobb_elso_kupola.receiveShadow = true;
+        jobb_elso_kupola.castShadow = true;
+        //scene.add( coneMesh );
+
+        //bal hatso kupola
+        var coneGeometry = new THREE.ConeGeometry( 3, 5, 4 );
+        var coneMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/roof.jpg');
+        coneMaterial.map = texture;
+        var bal_hatso_kupola = new THREE.Mesh( coneGeometry, coneMaterial );
+        bal_hatso_kupola.position.set(5,12.5,-6);
+        bal_hatso_kupola.rotateY(Math.PI/4);
+        bal_hatso_kupola.receiveShadow = true;
+        bal_hatso_kupola.castShadow = true;
+        //scene.add( coneMesh );
+
+        //jobb hatso kupola
+        var coneGeometry = new THREE.ConeGeometry( 3, 5, 4 );
+        var coneMaterial = new THREE.MeshPhongMaterial( {  wireframe:false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/roof.jpg');
+        coneMaterial.map = texture;
+        var jobb_hatso_kupola = new THREE.Mesh( coneGeometry, coneMaterial );
+        jobb_hatso_kupola.position.set(19,12.5,-6);
+        jobb_hatso_kupola.rotateY(Math.PI/4);
+        jobb_hatso_kupola.receiveShadow = true;
+        jobb_hatso_kupola.castShadow = true;
+        //scene.add( coneMesh );
+
+        //bal oldalso vizszintes resz
+        var boxGeometry = new THREE.BoxGeometry( 17, 2, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var bal_vizszintes= new THREE.Mesh( boxGeometry, boxMaterial );
+        bal_vizszintes.position.set(5,9,4.5);
+        bal_vizszintes.rotateY(Math.PI/2);
+        bal_vizszintes.receiveShadow = true;
+        bal_vizszintes.castShadow = true;
+        // scene.add( boxMesh );
+
+        //jobb oldalso vizszintes resz
+        var boxGeometry = new THREE.BoxGeometry( 17, 2, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false} );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var jobb_vizszintes = new THREE.Mesh( boxGeometry, boxMaterial );
+        jobb_vizszintes.position.set(19,9,4.5);
+        jobb_vizszintes.rotateY(Math.PI/2);
+        jobb_vizszintes.receiveShadow = true;
+        jobb_vizszintes.castShadow = true;
+        // scene.add( boxMesh );
+
+        //teto
+        var coneGeometry = new THREE.ConeGeometry( 12, 12, 4 ,15);
+        var coneMaterial = new THREE.MeshPhongMaterial( { wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/roof.jpg');
+        coneMaterial.map = texture;
+        var teto = new THREE.Mesh( coneGeometry, coneMaterial );
+        teto.position.set(12,15,4.5);
+        teto.rotateY(Math.PI/4);
+        teto.receiveShadow = true;
+        teto.castShadow = true;
+
+
+
+        //bal oldali oszlop
+        var boxGeometry = new THREE.BoxGeometry( 4, 6, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {  wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var bal_oszlop = new THREE.Mesh( boxGeometry, boxMaterial );
+        bal_oszlop.position.set(5,5,5);
+        bal_oszlop.receiveShadow = true;
+        bal_oszlop.castShadow = true;
+
+
+
+        //jobb oldali oszlop
+        var boxGeometry = new THREE.BoxGeometry( 4, 6, 4 );
+        var boxMaterial = new THREE.MeshPhongMaterial( {wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+
+        boxMaterial.map = texture;
+        var jobb_oszlop = new THREE.Mesh( boxGeometry, boxMaterial );
+        jobb_oszlop.position.set(19,5,5);
+        jobb_oszlop.receiveShadow = true;
+        jobb_oszlop.castShadow = true;
+        //scene.add( boxMesh );
+
+        const epulet = new THREE.Group();
+        epulet.add(jobb_oszlop);
+        epulet.add(bal_oszlop);
+        epulet.add(teto);
+        epulet.add(kozepso_elol_vizszint);
+        epulet.add(kozepso_hatso_vizszint);
+        epulet.add(bal_elso_vertikalis);
+        epulet.add(bal_hatso_vertikalis);
+        epulet.add(jobb_elso_vertikalis);
+        epulet.add(jobb_hatso_vertikalis);
+        epulet.add(bal_elso_kupola);
+        epulet.add(jobb_elso_kupola);
+        epulet.add(bal_hatso_kupola);
+        epulet.add(jobb_hatso_kupola);
+        epulet.add(bal_vizszintes);
+        epulet.add(jobb_vizszintes);
+        scene.add(epulet);
+        epulet.position.set(-5,0,0);
+
+        var boxGeometry = new THREE.BoxGeometry( 0.5,7,1);
+        var boxMaterial = new THREE.MeshPhongMaterial( {wireframe: false } );
+        var textureLoader = new THREE.TextureLoader();
+        var texture = textureLoader.load( 'assets/texture/brick.jpg');
+        boxMaterial.map = texture;
+        var lampa_allvany = new THREE.Mesh( boxGeometry, boxMaterial );
+        lampa_allvany.position.set(23,2.5,5);
+        lampa_allvany.receiveShadow = true;
+        lampa_allvany.castShadow = true;
+
+
+
+        var boxGeometry = new THREE.SphereGeometry();
+        var boxMaterial = new THREE.MeshPhongMaterial( {wireframe: false, color:0xffe599} );
+        var textureLoader = new THREE.TextureLoader();
+
+        lampa_izzo = new THREE.Mesh( boxGeometry, boxMaterial );
+        lampa_izzo.position.set(23,6,5);
+        lampa_izzo.receiveShadow = true;
+        lampa_izzo.castShadow = true;
+
+        lampa_izzo.material.color.set(zold);
+
+
+        var lampa = new THREE.Group();
+        lampa.add(lampa_allvany);
+        lampa.add(lampa_izzo);
+        scene.add(lampa);
+        lampa.position.set(0,3,10)
+
+    ctrl = new meshController();
+    addControlGui(ctrl);
+    addStatsObject();
+
+
+
+        // var sLH1 = new THREE.SpotLightHelper( light1 );
+        // scene.add( sLH1 );
+
+        // Az ablak átméretezése esetén visszahívható függvény megadása
+        window.addEventListener( 'resize', handleWindowResize, false );
+
+
+        // Kamera vezérlés
+        controls = new TrackballControls( camera, renderer.domElement );
+        controls.rotateSpeed = 5.0;
+        controls.panSpeed = 1.0;
+
+
+
+
+        var pLight = new THREE.PointLight( 0xffffff, 0.5 );
+        pLight.position.set( -20, 60, 15 );
+        pLight.castShadow = true;
+        scene.add( pLight );
+
+         sLight = new THREE.SpotLight(0x34ebcc,1);
+        sLight.position.set( 30, 30, 15 );
+        sLight.angle = Math.PI / 16;
+        sLight.target = meshLoaded;
+        scene.add( sLight );
+
+        sLight2 = new THREE.SpotLight(0xc6603,1);
+        sLight2.position.set( 0, 50, 15 );
+        sLight2.angle = Math.PI / 16;
+        sLight2.target = lampa;
+        scene.add( sLight2 );
+
+        ambientLight = new THREE.AmbientLight(0xffffff,  1 );
+        scene.add( ambientLight );
+
+        // Animáció indítása
+        animate();
+    }
+
+
+
+    function handleWindowResize() {
+        // Az ablak átméretezése esetén a kamera vetítési paraméterek újraszámolása
+        HEIGHT = window.innerHeight;
+        WIDTH = window.innerWidth;
+        renderer.setSize( WIDTH, HEIGHT );
+        camera.aspect = WIDTH / HEIGHT;
+        camera.updateProjectionMatrix();
+
+        render();
+    }
+    var clock = new THREE.Clock();
+
+    var updateLampaColor = function() {
+        var time = clock.getElapsedTime();
+        if ( time > 1 ) {
+            changeColor();
+            clock.start();
+        }
+    };
+
+    function changeColor(){
+
+        if(lampa_izzo.material.color.equals(zold)){
+            lampa_izzo.material.color.set(piros);
+        }else{
+            lampa_izzo.material.color.set(zold);
+        }
+
+
+    }
+    function animate() {
+        // Újabb képkocka rajzolásának kérése.
+        // Maximálisan 60 FPS-t biztosít a rendszer.
+
+        stats.update();
+        updateLampaColor();
+        requestAnimationFrame( animate );
+        meshLoaded.position.z = ctrl.positionVonat;
+        controls.update();
+
+
+        render();
+    }
+
+    function render() {
+
+        // 3D -> 2D vetített kép kiszámítása.
+        // scene 3D színtér képe a camera kamera szemszögéből.
+        renderer.render(scene, camera);
+    }
+
+</script>
+</body>
+</html>

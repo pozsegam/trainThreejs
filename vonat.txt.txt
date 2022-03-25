@@ -1,0 +1,21 @@
+vonat test cylinder elhelyezese:
+		CTRL+B - orr lekerekites
+vonat also cube elhelyezese:
+		atmeretezes
+vonat hatso resz cube elhelyezese
+		meretezes
+		CTRL + B - teto lekerekites
+		I - inset faces
+		E - extrude funkcio hasznalata(ablakok kivagasa)
+		CTRL + B - teto lekerekites, orr lekerekites	
+cylinder elhelyezese kemenynek
+		I - inset faces
+		E - extrude funkcio hasznalata(kemeny kivagasa)
+8db cylinder elhelyezese:
+		I - inset faces
+		S - kullok behuzasa
+		Object -> make links -> materials
+			egyszerre szinezes megoldasa
+		
+
+		
