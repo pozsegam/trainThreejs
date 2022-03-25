@@ -1,1 +1,1 @@
-live: 'ttps://pozsegam.github.io/trainThreejs/'
+live: ttps://pozsegam.github.io/trainThreejs/
